@@ -110,7 +110,8 @@ func (u *UDP) NextLayerType() gopacket.LayerType {
 }
 
 func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
-	udp := &UDP{}
+	//udp := &UDP{}
+	udp := udpPool.Get().(*UDP)
 	err := udp.DecodeFromBytes(data, p)
 	p.AddLayer(udp)
 	p.SetTransportLayer(udp)

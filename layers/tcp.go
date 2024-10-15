@@ -314,7 +314,8 @@ func (t *TCP) NextLayerType() gopacket.LayerType {
 }
 
 func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
-	tcp := &TCP{}
+	//tcp := &TCP{}
+	tcp := tcpPool.Get().(*TCP)
 	err := tcp.DecodeFromBytes(data, p)
 	p.AddLayer(tcp)
 	p.SetTransportLayer(tcp)

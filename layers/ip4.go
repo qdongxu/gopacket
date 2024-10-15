@@ -286,7 +286,8 @@ func (i *IPv4) NextLayerType() gopacket.LayerType {
 }
 
 func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
-	ip := &IPv4{}
+	//ip := &IPv4{}
+	ip := ipv4Pool.Get().(*IPv4)
 	err := ip.DecodeFromBytes(data, p)
 	p.AddLayer(ip)
 	p.SetNetworkLayer(ip)

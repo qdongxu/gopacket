@@ -79,9 +79,9 @@ type Packet interface {
 	//// ------------------------------------------------------------------
 	// LinkLayer returns the first link layer in the packet
 	LinkLayer() LinkLayer
-	// NetworkLayer returns the first network layer in the packet
+	// NetworkLayer returns the first Network layer in the packet
 	NetworkLayer() NetworkLayer
-	// TransportLayer returns the first transport layer in the packet
+	// TransportLayer returns the first Transport layer in the packet
 	TransportLayer() TransportLayer
 	// ApplicationLayer returns the first application layer in the packet
 	ApplicationLayer() ApplicationLayer
@@ -101,7 +101,7 @@ type Packet interface {
 
 // packet contains all the information we need to fulfill the Packet interface,
 // and its two "subclasses" (yes, no such thing in Go, bear with me),
-// eagerPacket and lazyPacket, provide eager and lazy decoding logic around the
+// EagerPacket and LazyPacket, provide eager and lazy decoding logic around the
 // various functions needed to access this information.
 type packet struct {
 	// data contains the entire packet data for a packet
@@ -120,8 +120,8 @@ type packet struct {
 
 	// Pointers to the various important layers
 	link        LinkLayer
-	network     NetworkLayer
-	transport   TransportLayer
+	Network     NetworkLayer
+	Transport   TransportLayer
 	application ApplicationLayer
 	failure     ErrorLayer
 }
@@ -137,14 +137,14 @@ func (p *packet) SetLinkLayer(l LinkLayer) {
 }
 
 func (p *packet) SetNetworkLayer(l NetworkLayer) {
-	if p.network == nil {
-		p.network = l
+	if p.Network == nil {
+		p.Network = l
 	}
 }
 
 func (p *packet) SetTransportLayer(l TransportLayer) {
-	if p.transport == nil {
-		p.transport = l
+	if p.Transport == nil {
+		p.Transport = l
 	}
 }
 
@@ -205,9 +205,10 @@ func (p *packet) recoverDecodeError() {
 // in a single line, with no trailing newline.  This function is specifically
 // designed to do the right thing for most layers... it follows the following
 // rules:
-//  * If the Layer has a String function, just output that.
-//  * Otherwise, output all exported fields in the layer, recursing into
-//    exported slices and structs.
+//   - If the Layer has a String function, just output that.
+//   - Otherwise, output all exported fields in the layer, recursing into
+//     exported slices and structs.
+//
 // NOTE:  This is NOT THE SAME AS fmt's "%#v".  %#v will output both exported
 // and unexported fields... many times packet layers contain unexported stuff
 // that would just mess up the output of the layer, see for example the
@@ -247,11 +248,12 @@ func LayerDump(l Layer) string {
 // LayerString for more details.
 //
 // Params:
-//   i - value to write out
-//   anonymous:  if we're currently recursing an anonymous member of a struct
-//   writeSpace:  if we've already written a value in a struct, and need to
-//     write a space before writing more.  This happens when we write various
-//     anonymous values, and need to keep writing more.
+//
+//	i - value to write out
+//	anonymous:  if we're currently recursing an anonymous member of a struct
+//	writeSpace:  if we've already written a value in a struct, and need to
+//	  write a space before writing more.  This happens when we write various
+//	  anonymous values, and need to keep writing more.
 func layerString(v reflect.Value, anonymous bool, writeSpace bool) string {
 	// Let String() functions take precedence.
 	if v.CanInterface() {
@@ -425,16 +427,16 @@ func (p *packet) packetDump() string {
 	return b.String()
 }
 
-// eagerPacket is a packet implementation that does eager decoding.  Upon
+// EagerPacket is a packet implementation that does eager decoding.  Upon
 // initial construction, it decodes all the layers it can from packet data.
-// eagerPacket implements Packet and PacketBuilder.
-type eagerPacket struct {
+// EagerPacket implements Packet and PacketBuilder.
+type EagerPacket struct {
 	packet
 }
 
 var errNilDecoder = errors.New("NextDecoder passed nil decoder, probably an unsupported decode type")
 
-func (p *eagerPacket) NextDecoder(next Decoder) error {
+func (p *EagerPacket) NextDecoder(next Decoder) error {
 	if next == nil {
 		return errNilDecoder
 	}
@@ -448,32 +450,32 @@ func (p *eagerPacket) NextDecoder(next Decoder) error {
 	// Since we're eager, immediately call the next decoder.
 	return next.Decode(d, p)
 }
-func (p *eagerPacket) initialDecode(dec Decoder) {
+func (p *EagerPacket) initialDecode(dec Decoder) {
 	defer p.recoverDecodeError()
 	err := dec.Decode(p.data, p)
 	if err != nil {
 		p.addFinalDecodeError(err, nil)
 	}
 }
-func (p *eagerPacket) LinkLayer() LinkLayer {
+func (p *EagerPacket) LinkLayer() LinkLayer {
 	return p.link
 }
-func (p *eagerPacket) NetworkLayer() NetworkLayer {
-	return p.network
+func (p *EagerPacket) NetworkLayer() NetworkLayer {
+	return p.Network
 }
-func (p *eagerPacket) TransportLayer() TransportLayer {
-	return p.transport
+func (p *EagerPacket) TransportLayer() TransportLayer {
+	return p.Transport
 }
-func (p *eagerPacket) ApplicationLayer() ApplicationLayer {
+func (p *EagerPacket) ApplicationLayer() ApplicationLayer {
 	return p.application
 }
-func (p *eagerPacket) ErrorLayer() ErrorLayer {
+func (p *EagerPacket) ErrorLayer() ErrorLayer {
 	return p.failure
 }
-func (p *eagerPacket) Layers() []Layer {
+func (p *EagerPacket) Layers() []Layer {
 	return p.layers
 }
-func (p *eagerPacket) Layer(t LayerType) Layer {
+func (p *EagerPacket) Layer(t LayerType) Layer {
 	for _, l := range p.layers {
 		if l.LayerType() == t {
 			return l
@@ -481,7 +483,7 @@ func (p *eagerPacket) Layer(t LayerType) Layer {
 	}
 	return nil
 }
-func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
+func (p *EagerPacket) LayerClass(lc LayerClass) Layer {
 	for _, l := range p.layers {
 		if lc.Contains(l.LayerType()) {
 			return l
@@ -489,26 +491,26 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 	}
 	return nil
 }
-func (p *eagerPacket) String() string { return p.packetString() }
-func (p *eagerPacket) Dump() string   { return p.packetDump() }
+func (p *EagerPacket) String() string { return p.packetString() }
+func (p *EagerPacket) Dump() string   { return p.packetDump() }
 
-// lazyPacket does lazy decoding on its packet data.  On construction it does
+// LazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
-// lazyPacket implements Packet and PacketBuilder.
-type lazyPacket struct {
+// LazyPacket implements Packet and PacketBuilder.
+type LazyPacket struct {
 	packet
 	next Decoder
 }
 
-func (p *lazyPacket) NextDecoder(next Decoder) error {
+func (p *LazyPacket) NextDecoder(next Decoder) error {
 	if next == nil {
 		return errNilDecoder
 	}
 	p.next = next
 	return nil
 }
-func (p *lazyPacket) decodeNextLayer() {
+func (p *LazyPacket) decodeNextLayer() {
 	if p.next == nil {
 		return
 	}
@@ -529,43 +531,43 @@ func (p *lazyPacket) decodeNextLayer() {
 		p.addFinalDecodeError(err, nil)
 	}
 }
-func (p *lazyPacket) LinkLayer() LinkLayer {
+func (p *LazyPacket) LinkLayer() LinkLayer {
 	for p.link == nil && p.next != nil {
 		p.decodeNextLayer()
 	}
 	return p.link
 }
-func (p *lazyPacket) NetworkLayer() NetworkLayer {
-	for p.network == nil && p.next != nil {
+func (p *LazyPacket) NetworkLayer() NetworkLayer {
+	for p.Network == nil && p.next != nil {
 		p.decodeNextLayer()
 	}
-	return p.network
+	return p.Network
 }
-func (p *lazyPacket) TransportLayer() TransportLayer {
-	for p.transport == nil && p.next != nil {
+func (p *LazyPacket) TransportLayer() TransportLayer {
+	for p.Transport == nil && p.next != nil {
 		p.decodeNextLayer()
 	}
-	return p.transport
+	return p.Transport
 }
-func (p *lazyPacket) ApplicationLayer() ApplicationLayer {
+func (p *LazyPacket) ApplicationLayer() ApplicationLayer {
 	for p.application == nil && p.next != nil {
 		p.decodeNextLayer()
 	}
 	return p.application
 }
-func (p *lazyPacket) ErrorLayer() ErrorLayer {
+func (p *LazyPacket) ErrorLayer() ErrorLayer {
 	for p.failure == nil && p.next != nil {
 		p.decodeNextLayer()
 	}
 	return p.failure
 }
-func (p *lazyPacket) Layers() []Layer {
+func (p *LazyPacket) Layers() []Layer {
 	for p.next != nil {
 		p.decodeNextLayer()
 	}
 	return p.layers
 }
-func (p *lazyPacket) Layer(t LayerType) Layer {
+func (p *LazyPacket) Layer(t LayerType) Layer {
 	for _, l := range p.layers {
 		if l.LayerType() == t {
 			return l
@@ -583,7 +585,7 @@ func (p *lazyPacket) Layer(t LayerType) Layer {
 	}
 	return nil
 }
-func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
+func (p *LazyPacket) LayerClass(lc LayerClass) Layer {
 	for _, l := range p.layers {
 		if lc.Contains(l.LayerType()) {
 			return l
@@ -601,8 +603,8 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 	}
 	return nil
 }
-func (p *lazyPacket) String() string { p.Layers(); return p.packetString() }
-func (p *lazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
+func (p *LazyPacket) String() string { p.Layers(); return p.packetString() }
+func (p *LazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
 
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
@@ -658,10 +660,9 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		data = dataCopy
 	}
 	if options.Lazy {
-		p := &lazyPacket{
-			packet: packet{data: data, decodeOptions: options},
-			next:   firstLayerDecoder,
-		}
+		p := lazyPacketPool.Get().(*LazyPacket)
+		p.packet = packet{data: data, decodeOptions: options}
+		p.next = firstLayerDecoder
 		p.layers = p.initialLayers[:0]
 		// Crazy craziness:
 		// If the following return statemet is REMOVED, and Lazy is FALSE, then
@@ -675,9 +676,8 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		// to live with slower packet processing.
 		return p
 	}
-	p := &eagerPacket{
-		packet: packet{data: data, decodeOptions: options},
-	}
+	p := eagerPacketPool.Get().(*EagerPacket)
+	p.packet = packet{data: data, decodeOptions: options}
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
 	return p
@@ -748,18 +748,19 @@ type ZeroCopyPacketDataSource interface {
 // There are currently two different methods for reading packets in through
 // a PacketSource:
 //
-// Reading With Packets Function
+// # Reading With Packets Function
 //
 // This method is the most convenient and easiest to code, but lacks
 // flexibility.  Packets returns a 'chan Packet', then asynchronously writes
 // packets into that channel.  Packets uses a blocking channel, and closes
 // it if an io.EOF is returned by the underlying PacketDataSource.  All other
 // PacketDataSource errors are ignored and discarded.
-//  for packet := range packetSource.Packets() {
-//    ...
-//  }
 //
-// Reading With NextPacket Function
+//	for packet := range packetSource.Packets() {
+//	  ...
+//	}
+//
+// # Reading With NextPacket Function
 //
 // This method is the most flexible, and exposes errors that may be
 // encountered by the underlying PacketDataSource.  It's also the fastest
@@ -767,16 +768,17 @@ type ZeroCopyPacketDataSource interface {
 // read/write.  However, it requires the user to handle errors, most
 // importantly the io.EOF error in cases where packets are being read from
 // a file.
-//  for {
-//    packet, err := packetSource.NextPacket()
-//    if err == io.EOF {
-//      break
-//    } else if err != nil {
-//      log.Println("Error:", err)
-//      continue
-//    }
-//    handlePacket(packet)  // Do something with each packet.
-//  }
+//
+//	for {
+//	  packet, err := packetSource.NextPacket()
+//	  if err == io.EOF {
+//	    break
+//	  } else if err != nil {
+//	    log.Println("Error:", err)
+//	    continue
+//	  }
+//	  handlePacket(packet)  // Do something with each packet.
+//	}
 type PacketSource struct {
 	source  PacketDataSource
 	decoder Decoder
@@ -821,7 +823,7 @@ func (p *PacketSource) packetsToChannel() {
 			continue
 		}
 
-		// Immediately retry for temporary network errors
+		// Immediately retry for temporary Network errors
 		if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
 			continue
 		}
@@ -850,9 +852,9 @@ func (p *PacketSource) packetsToChannel() {
 // PacketDataSource returns an io.EOF error, the channel will be closed.
 // If any other error is encountered, it is ignored.
 //
-//  for packet := range packetSource.Packets() {
-//    handlePacket(packet)  // Do something with each packet.
-//  }
+//	for packet := range packetSource.Packets() {
+//	  handlePacket(packet)  // Do something with each packet.
+//	}
 //
 // If called more than once, returns the same channel.
 func (p *PacketSource) Packets() chan Packet {
