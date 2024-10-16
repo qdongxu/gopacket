@@ -811,6 +811,26 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	return packet, nil
 }
 
+type Destroyer struct {
+	Packet
+}
+
+func (d *Destroyer) Handle(handler func(packet2 Packet)) {
+	defer Free(d.Packet)
+	handler(d.Packet)
+}
+
+// NextPacketWithDestroyer accepts a handle function to process the packet.
+// it invokes NextPacket to fetch the packet( or a error), forwarding to handle.
+// it returns the result of handler.
+func (p *PacketSource) NextPacketWithDestroyer() (*Destroyer, error) {
+	packet, err := p.NextPacket()
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer{Packet: packet}, err
+}
+
 // packetsToChannel reads in all packets from the packet source and sends them
 // to the given channel. This routine terminates when a non-temporary error
 // is returned by NextPacket().

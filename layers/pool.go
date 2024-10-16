@@ -71,10 +71,6 @@ func GetUDP() gopacket.TransportLayer {
 
 // Free put the packet back into the pool.
 func Free(p gopacket.Layer) {
-	if p == nil {
-		return
-	}
-
 	if reflect.ValueOf(p).IsNil() {
 		return
 	}
