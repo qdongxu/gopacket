@@ -7,13 +7,13 @@ import (
 
 var pools = make(map[reflect.Type]interface{})
 
-func newPool[T any]() Pool[T] {
+func newPool[R Recycler[T], T any]() Pool[T] {
 	pp := &pool[T]{}
 	pp.p = sync.Pool{
 		New: func() any {
-			r := new(recycler[T])
-			r.p = pp
-			return r
+			r := reflect.New(reflect.TypeFor[R]().Elem())
+			r.Interface().(R).SetPool(pp)
+			return r.Interface().(R)
 		},
 	}
 	return pp
@@ -40,7 +40,7 @@ func (p *pool[T]) Free(r Recycler[T]) {
 }
 
 type recycler[T any] struct {
-	p *pool[T]
+	p Pool[T]
 	t T
 }
 
@@ -56,13 +56,17 @@ func (t *recycler[T]) Free() {
 	t.p.Free(t)
 }
 
+func (t *recycler[T]) SetPool(p Pool[T]) {
+	t.p = p
+}
+
 func Get[R Recycler[T], T any]() Recycler[T] {
 	p, ok := pools[reflect.TypeFor[T]()]
 	if ok {
 		return p.(*pool[T]).Get()
 	}
 
-	p = newPool[T]()
+	p = newPool[R, T]()
 	pools[reflect.TypeFor[T]()] = p
 	return p.(*pool[T]).Get()
 }
