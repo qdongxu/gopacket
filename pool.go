@@ -40,8 +40,8 @@ func (p *pool[T]) Free(r Recycler[T]) {
 }
 
 type recycler[T any] struct {
+	t T // t must be the first elem to align the memory bound, ensuring the addr of &t is the addr of &recycler
 	p Pool[T]
-	t T
 }
 
 func (t *recycler[T]) Handle(HandleFunc func(p *T) error) error {
@@ -61,12 +61,19 @@ func (t *recycler[T]) SetPool(p Pool[T]) {
 }
 
 func Get[R Recycler[T], T any]() Recycler[T] {
+	p := GetPool[R, T]()
+
+	return p.(*pool[T]).Get()
+}
+
+func GetPool[R Recycler[T], T any]() Pool[T] {
 	p, ok := pools[reflect.TypeFor[T]()]
 	if ok {
-		return p.(*pool[T]).Get()
+		return p.(*pool[T])
 	}
 
 	p = newPool[R, T]()
 	pools[reflect.TypeFor[T]()] = p
-	return p.(*pool[T]).Get()
+
+	return p.(Pool[T])
 }

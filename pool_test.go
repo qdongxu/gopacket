@@ -3,6 +3,7 @@ package gopacket
 import (
 	"fmt"
 	"testing"
+	"unsafe"
 )
 
 type Object interface {
@@ -36,7 +37,9 @@ func TestPool(t *testing.T) {
 
 	i = Get[*recycler[Int], Int]()
 	err = i.Handle(func(o *Int) error {
-		fmt.Println(o.I)
+		if i.Get().I != 0 {
+			t.Errorf("instance was not reset to zero value")
+		}
 		return nil
 	})
 
@@ -54,5 +57,20 @@ func TestPoolMap(t *testing.T) {
 		return nil
 	})
 	i.Free()
+
+}
+
+func TestPointer(t *testing.T) {
+	r := &recycler[Int]{}
+	r.Get().I = 10
+	i := &r.t
+
+	r2 := (*recycler[Int])(unsafe.Pointer(i))
+
+	i2 := &r2.t
+
+	if i.I != i2.I {
+		t.Errorf("addr changed, the value does not equal: i=%d, i2=%d", i.I, i2.I)
+	}
 
 }
