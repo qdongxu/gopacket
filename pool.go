@@ -7,6 +7,8 @@ import (
 
 var pools = make(map[reflect.Type]interface{})
 
+var TcpFreeFunc func(layer Layer)
+
 func newPool[R Recycler[T], T any]() Pool[T] {
 	pp := &pool[T]{}
 	pp.p = sync.Pool{
@@ -25,7 +27,7 @@ type pool[T any] struct {
 
 func (p *pool[T]) Get() Recycler[T] {
 	r := p.p.Get()
-	t, ok := r.(*recycler[T])
+	t, ok := r.(*BaseRecycler[T])
 	if ok {
 		return t
 	}
@@ -34,29 +36,29 @@ func (p *pool[T]) Get() Recycler[T] {
 }
 
 func (p *pool[T]) Free(r Recycler[T]) {
-	//t := r.(*recycler[T])
-	//t.t = reflect.Zero(reflect.TypeFor[T]()).Interface().(T)
+	t := r.Get()
+	*t = reflect.Zero(reflect.TypeFor[T]()).Interface().(T)
 	p.p.Put(r)
 }
 
-type recycler[T any] struct {
-	t T // t must be the first elem to align the memory bound, ensuring the addr of &t is the addr of &recycler
+type BaseRecycler[T any] struct {
+	t T // t must be the first elem to align the memory bound, ensuring the addr of &t is the addr of &BaseRecycler
 	p Pool[T]
 }
 
-func (t *recycler[T]) Handle(HandleFunc func(p *T) error) error {
+func (t *BaseRecycler[T]) Handle(HandleFunc func(p *T) error) error {
 	defer t.Free()
 	return HandleFunc(&t.t)
 }
-func (t *recycler[T]) Get() *T {
+func (t *BaseRecycler[T]) Get() *T {
 	return &t.t
 }
 
-func (t *recycler[T]) Free() {
+func (t *BaseRecycler[T]) Free() {
 	t.p.Free(t)
 }
 
-func (t *recycler[T]) SetPool(p Pool[T]) {
+func (t *BaseRecycler[T]) SetPool(p Pool[T]) {
 	t.p = p
 }
 
@@ -64,6 +66,10 @@ func Get[R Recycler[T], T any]() Recycler[T] {
 	p := GetPool[R, T]()
 
 	return p.(*pool[T]).Get()
+}
+
+func GetPoolByType(t reflect.Type) interface{} {
+	return pools[t]
 }
 
 func GetPool[R Recycler[T], T any]() Pool[T] {
