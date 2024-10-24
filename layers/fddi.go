@@ -28,7 +28,9 @@ func (f *FDDI) LinkFlow() gopacket.Flow {
 }
 
 func decodeFDDI(data []byte, p gopacket.PacketBuilder) error {
-	f := &FDDI{
+	f0 := gopacket.Get[*gopacket.BaseRecycler[FDDI], FDDI]()
+	f := f0.Get()
+	*f = FDDI{
 		FrameControl: FDDIFrameControl(data[0] & 0xF8),
 		Priority:     data[0] & 0x07,
 		SrcMAC:       net.HardwareAddr(data[1:7]),

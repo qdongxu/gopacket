@@ -7,7 +7,9 @@ import (
 
 var pools = make(map[reflect.Type]interface{})
 
-var TcpFreeFunc func(layer Layer)
+var TCPFreeFunc func(layer TransportLayer)
+var IPFreeFunc func(layer NetworkLayer)
+var LinkFreeFunc func(layer LinkLayer)
 
 func newPool[R Recycler[T], T any]() Pool[T] {
 	pp := &pool[T]{}

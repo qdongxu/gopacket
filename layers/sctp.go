@@ -28,7 +28,8 @@ type SCTP struct {
 func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
 func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
-	sctp := &SCTP{}
+	sctp0 := gopacket.Get[*gopacket.BaseRecycler[SCTP], SCTP]()
+	sctp := sctp0.Get()
 	err := sctp.DecodeFromBytes(data, p)
 	p.AddLayer(sctp)
 	p.SetTransportLayer(sctp)

@@ -291,7 +291,8 @@ func (ipv6 *IPv6) NextLayerType() gopacket.LayerType {
 }
 
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
-	ip6 := &IPv6{}
+	ip60 := gopacket.Get[*gopacket.BaseRecycler[IPv6], IPv6]()
+	ip6 := ip60.Get()
 	err := ip6.DecodeFromBytes(data, p)
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)

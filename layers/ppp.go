@@ -36,7 +36,8 @@ func (p *PPP) LayerType() gopacket.LayerType { return LayerTypePPP }
 func (p *PPP) LinkFlow() gopacket.Flow { return PPPFlow }
 
 func decodePPP(data []byte, p gopacket.PacketBuilder) error {
-	ppp := &PPP{}
+	ppp0 := gopacket.Get[*gopacket.BaseRecycler[PPP], PPP]()
+	ppp := ppp0.Get()
 	offset := 0
 	if data[0] == 0xff && data[1] == 0x03 {
 		offset = 2

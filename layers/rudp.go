@@ -41,7 +41,9 @@ type RUDPHeaderEACK struct {
 func (r *RUDP) LayerType() gopacket.LayerType { return LayerTypeRUDP }
 
 func decodeRUDP(data []byte, p gopacket.PacketBuilder) error {
-	r := &RUDP{
+	r0 := gopacket.Get[*gopacket.BaseRecycler[RUDP], RUDP]()
+	r := r0.Get()
+	*r = RUDP{
 		SYN:          data[0]&0x80 != 0,
 		ACK:          data[0]&0x40 != 0,
 		EACK:         data[0]&0x20 != 0,

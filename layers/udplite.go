@@ -25,7 +25,9 @@ type UDPLite struct {
 func (u *UDPLite) LayerType() gopacket.LayerType { return LayerTypeUDPLite }
 
 func decodeUDPLite(data []byte, p gopacket.PacketBuilder) error {
-	udp := &UDPLite{
+	udp0 := gopacket.Get[*gopacket.BaseRecycler[UDPLite], UDPLite]()
+	udp := udp0.Get()
+	*udp = UDPLite{
 		SrcPort:          UDPLitePort(binary.BigEndian.Uint16(data[0:2])),
 		sPort:            data[0:2],
 		DstPort:          UDPLitePort(binary.BigEndian.Uint16(data[2:4])),

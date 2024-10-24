@@ -88,7 +88,8 @@ func (sll *LinuxSLL) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 }
 
 func decodeLinuxSLL(data []byte, p gopacket.PacketBuilder) error {
-	sll := &LinuxSLL{}
+	ssl0 := gopacket.Get[*gopacket.BaseRecycler[LinuxSLL], LinuxSLL]()
+	sll := ssl0.Get()
 	if err := sll.DecodeFromBytes(data, p); err != nil {
 		return err
 	}

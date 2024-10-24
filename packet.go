@@ -29,7 +29,11 @@ func (p *packetRecycler[T]) Free() {
 	payload := p.Get()
 
 	if payload.transport != nil {
-		TcpFreeFunc(payload.transport)
+		TCPFreeFunc(payload.transport)
+	}
+
+	if payload.network != nil {
+		IPFreeFunc(payload.network)
 	}
 
 	p.p.Free(p)
@@ -668,6 +672,7 @@ var DecodeStreamsAsDatagrams = DecodeOptions{DecodeStreamsAsDatagrams: true}
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
 func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet {
+
 	if !options.NoCopy {
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -697,6 +702,47 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
 	return p
+}
+
+// NewRecyclablePacket creates a new Packet object from a set of bytes.  The
+// firstLayerDecoder tells it how to interpret the first layer from the bytes,
+// future layers will be generated from that first layer automatically.
+func NewRecyclablePacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Recycler[Packet] {
+
+	if !options.NoCopy {
+		dataCopy := make([]byte, len(data))
+		copy(dataCopy, data)
+		data = dataCopy
+	}
+	if options.Lazy {
+		p0 := Get[*packetRecycler[lazyPacket], lazyPacket]()
+		p := p0.Get()
+		*p = lazyPacket{
+			packet: packet{data: data, decodeOptions: options},
+			next:   firstLayerDecoder,
+		}
+		p.layers = p.initialLayers[:0]
+		// Crazy craziness:
+		// If the following return statemet is REMOVED, and Lazy is FALSE, then
+		// eager packet processing becomes 17% FASTER.  No, there is no logical
+		// explanation for this.  However, it's such a hacky micro-optimization that
+		// we really can't rely on it.  It appears to have to do with the size the
+		// compiler guesses for this function's stack space, since one symptom is
+		// that with the return statement in place, we more than double calls to
+		// runtime.morestack/runtime.lessstack.  We'll hope the compiler gets better
+		// over time and we get this optimization for free.  Until then, we'll have
+		// to live with slower packet processing.
+		return p0.(Recycler[Packet])
+	}
+
+	p0 := Get[*packetRecycler[eagerPacket], eagerPacket]()
+	p := p0.Get()
+	*p = eagerPacket{
+		packet: packet{data: data, decodeOptions: options},
+	}
+	p.layers = p.initialLayers[:0]
+	p.initialDecode(firstLayerDecoder)
+	return p0.(Recycler[Packet])
 }
 
 // PacketDataSource is an interface for some source of packet data.  Users may

@@ -11,10 +11,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/google/gopacket"
 	"net"
 	"strings"
-
-	"github.com/google/gopacket"
 )
 
 type IPv4Flag uint8
@@ -286,7 +285,8 @@ func (i *IPv4) NextLayerType() gopacket.LayerType {
 }
 
 func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
-	ip := &IPv4{}
+	ip0 := gopacket.Get[*gopacket.BaseRecycler[IPv4], IPv4]()
+	ip := ip0.Get()
 	err := ip.DecodeFromBytes(data, p)
 	p.AddLayer(ip)
 	p.SetNetworkLayer(ip)

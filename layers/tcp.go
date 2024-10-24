@@ -13,19 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/gopacket"
-	"unsafe"
 )
-
-func init() {
-	gopacket.TcpFreeFunc = Free
-}
-func Free(d gopacket.Layer) {
-	var u interface{} = d
-	var v = unsafe.Pointer(&u)
-	var m = (*interface{})(v)
-	var w = (*m).(*gopacket.BaseRecycler[TCP])
-	w.Free()
-}
 
 // TCP is the layer for TCP headers.
 type TCP struct {
@@ -325,8 +313,8 @@ func (t *TCP) NextLayerType() gopacket.LayerType {
 }
 
 func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
-	r := gopacket.Get[*gopacket.BaseRecycler[TCP], TCP]()
-	tcp := r.Get()
+	tcp0 := gopacket.Get[*gopacket.BaseRecycler[TCP], TCP]()
+	tcp := tcp0.Get()
 	err := tcp.DecodeFromBytes(data, p)
 	p.AddLayer(tcp)
 	p.SetTransportLayer(tcp)
