@@ -52,6 +52,7 @@ func (t *BaseRecycler[T]) Handle(HandleFunc func(p *T) error) error {
 	defer t.Free()
 	return HandleFunc(&t.t)
 }
+
 func (t *BaseRecycler[T]) Get() *T {
 	return &t.t
 }

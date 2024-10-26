@@ -19,14 +19,18 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
-type packetRecycler[T packet] struct {
-	BaseRecycler[packet]
+type packetRecycler[T any] struct {
+	BaseRecycler[T]
 }
 
 func (p *packetRecycler[T]) Free() {
-	payload := p.Get()
+	var p0 interface{} = unsafe.Pointer(p.Get())
+	var p1 *interface{} = &p0
+
+	payload := (*p1).(*packet)
 
 	if payload.transport != nil {
 		TCPFreeFunc(payload.transport)
@@ -34,6 +38,10 @@ func (p *packetRecycler[T]) Free() {
 
 	if payload.network != nil {
 		IPFreeFunc(payload.network)
+	}
+
+	if payload.link != nil {
+		LinkFreeFunc(payload.link)
 	}
 
 	p.p.Free(p)
@@ -871,6 +879,23 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	m.CaptureInfo = ci
 	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length
 	return packet, nil
+}
+
+// NextRecyclablePacket returns the next decoded packet from the PacketSource.  On error,
+// it returns a nil packet and a non-nil error.
+func (p *PacketSource) NextRecyclablePacket() (Recycler[Packet], error) {
+	data, ci, err := p.source.ReadPacketData()
+	if err != nil {
+		return nil, err
+	}
+	packet0 := NewRecyclablePacket(data, p.decoder, p.DecodeOptions)
+	packet1 := packet0.Get()
+	var packet2 interface{} = packet1
+	packet := packet2.(*packet)
+	m := packet.Metadata()
+	m.CaptureInfo = ci
+	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length
+	return packet0, nil
 }
 
 // packetsToChannel reads in all packets from the packet source and sends them
